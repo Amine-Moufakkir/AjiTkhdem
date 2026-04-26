@@ -1,4 +1,5 @@
-from .AbstractScraper import AbstractScraper
+from scrapper import AbstractScraper
+from scrapper import RekruteScraper   
 class Orchestrator:
     def __init__(self):
         # Could hold global config or shared sessions if needed later
@@ -14,13 +15,6 @@ class Orchestrator:
         
         if name == "rekrute":
             return RekruteScraper(url, user_agents, proxy_ips)
-        
-        elif name == "emploi.ma":
-            return EmploiMaScraper(url, user_agents, proxy_ips)
-            
-        elif name == "indeed":
-            # You can easily add more targets here
-            return IndeedScraper(url, user_agents, proxy_ips)
-            
+        # To add other scrapers later, just add more conditions here
         else:
             raise ValueError(f"Le scraper pour le site '{site_name}' n'existe pas.")
