@@ -1,19 +1,28 @@
-from orchestrator import Orchestrator
+from src.orchestrator.orchestrator import Orchestrator
 class Scheduler:
-    def __init__(self, proxy_ips: list, user_agents: list, orchestrator: Orchestrator):
-        self.proxy_ips = proxy_ips
-        self.user_agents = user_agents
+    def __init__(self, orchestrator: Orchestrator):
         self.orchestrator = orchestrator
 
     def schedule(self, site_name: str, url: str):
         print(f"--- Launching Job: {site_name} ---")
-        
-        # We pass the full lists down to the factory
+
         scraper = self.orchestrator.create_scraper(
             site_name=site_name, 
-            url=url, 
-            user_agents=self.user_agents, 
-            proxy_ips=self.proxy_ips
+            url=url
         )
         
         scraper.scrape()
+
+    # schedule method for production
+    #
+    #
+    # def schedule(self, site_name: str, url: str):
+    #     # We pass a lambda that tells the scheduler: 
+    #     # "When the timer hits, execute these two lines"
+    #     self._scheduler.add_job(
+    #         func=lambda: self.orchestrator.create_scraper(site_name, url).scrape(),
+    #         trigger='interval',
+    #         hours=4
+    #     )
+        
+    #     self._scheduler.start()

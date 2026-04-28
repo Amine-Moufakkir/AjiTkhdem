@@ -34,8 +34,15 @@ services:
       - kafka_data:/var/lib/kafka/data
     restart: always
 
+  raw-db:
+    image: mongo:6
+    container_name: raw-db
+    volumes:
+      - raw_data:/data/db
+    restart: always
+
   ingestion-service:
-    build: ./data-pipline/ingestion
+    build: ./data-pipeline/ingestion
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -51,44 +58,37 @@ services:
       - REDIS_PORT=6379
     restart: always
 
-  preprocessing-service:
-    build: ./data-pipline/pre-processing
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - All
-    cap_add:
-      - NET_BIND_SERVICE
-    depends_on:
-      - kafka
-      - raw-db
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - RAW_DB_URI=mongodb://raw-db:27017
-    restart: always
+  # preprocessing-service:
+  #   build: ./data-pipline/pre-processing
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   cap_drop:
+  #     - All
+  #   cap_add:
+  #     - NET_BIND_SERVICE
+  #   depends_on:
+  #     - kafka
+  #     - raw-db
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - RAW_DB_URI=mongodb://raw-db:27017
+  #   restart: always
 
-  raw-db:
-    image: mongo:6
-    container_name: raw-db
-    volumes:
-      - raw_data:/data/db
-    restart: always
-
-  normalization-service:
-    build: ./data-pipline/normalization
-    security_opt: 
-      - no-new-privileges:true
-    cap_drop: 
-      - All
-    cap_add:  
-      - NET_BIND_SERVICE
-    depends_on:
-      - kafka
-      - final-db
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - FINAL_DB_URI=postgresql://postgres:password@final-db:5432/jobs
-    restart: always
+  # normalization-service:
+  #   build: ./data-pipline/normalization
+  #   security_opt: 
+  #     - no-new-privileges:true
+  #   cap_drop: 
+  #     - All
+  #   cap_add:  
+  #     - NET_BIND_SERVICE
+  #   depends_on:
+  #     - kafka
+  #     - final-db
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - FINAL_DB_URI=postgresql://postgres:password@final-db:5432/jobs
+  #   restart: always
 
   final-db:
     image: postgres:15
