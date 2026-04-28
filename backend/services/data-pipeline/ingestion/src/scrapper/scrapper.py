@@ -1,10 +1,12 @@
 import random
 from abc import ABC, abstractmethod
 class AbstractScraper(ABC):
-    def __init__(self, url, user_agents, proxy_ips):
+    # Your raw data lists
+    proxies = ["192.168.1.1", "10.0.0.5"]
+    user_agents = ["Mozilla/5.0 (Windows NT 10.0)", "Mozilla/5.0 (Macintosh)"]
+
+    def __init__(self, url: str):
         self.url = url
-        self.user_agents = user_agents
-        self.proxy_ips = proxy_ips
 
     @abstractmethod
     def scrape(self):
@@ -17,7 +19,7 @@ class RekruteScraper(AbstractScraper):
         while current_page <= 500:
             # ROTATION LOGIC: Pick a new identity for every page
             active_ua = random.choice(self.user_agents)
-            active_ip = random.choice(self.proxy_ips)
+            active_ip = random.choice(self.proxies)
             
             page_url = f"{self.url}?page={current_page}"
             
