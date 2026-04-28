@@ -1,6 +1,8 @@
 from fastapi import FastAPI
-from orchestrator import Orchestrator
-from scheduler import Scheduler
+# pattern: from src.folder_name.file_name import ClassName
+
+from src.orchestrator.orchestrator import Orchestrator
+from src.scheduler.scheduler import Scheduler 
 
 app = FastAPI(title="AjiTkhdem - IngestionService")
 

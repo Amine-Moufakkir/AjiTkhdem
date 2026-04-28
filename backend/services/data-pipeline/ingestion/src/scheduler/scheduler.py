@@ -1,4 +1,4 @@
-from orchestrator import Orchestrator
+from src.orchestrator.orchestrator import Orchestrator
 class Scheduler:
     def __init__(self, orchestrator: Orchestrator):
         self.orchestrator = orchestrator

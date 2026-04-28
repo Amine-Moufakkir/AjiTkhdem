@@ -14,10 +14,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-
-
-
-
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,6 +28,9 @@ COPY --from=builder /opt/venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+# FIX: Tell Python that /app is the root directory for imports
+ENV PYTHONPATH="/app"
+
 COPY . .
 
 EXPOSE 8000
@@ -40,4 +39,5 @@ RUN chown -R kafkauser:kafkauser /app /opt/venv
 
 USER kafkauser
 
-CMD ["python", "votre_script_kafka.py"]
+# FASTAPI UPDATE: Use Uvicorn to serve the app on all network interfaces
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

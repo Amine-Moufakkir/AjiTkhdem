@@ -6,3 +6,5 @@ beautifulsoup4
 requests
 httpx
 apscheduler
+bs4
+redis
