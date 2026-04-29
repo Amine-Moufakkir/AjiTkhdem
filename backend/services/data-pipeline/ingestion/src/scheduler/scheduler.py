@@ -4,8 +4,8 @@ class Scheduler:
         self.orchestrator = orchestrator
 
     def schedule(self, site_name: str, url: str):
+        #ToRemove: Dev Mode
         print(f"--- Launching Job: {site_name} ---")
-
         scraper = self.orchestrator.create_scraper(
             site_name=site_name, 
             url=url

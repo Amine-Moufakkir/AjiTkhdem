@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from src.utility import get_request
 import redis
 from confluent_kafka import Producer
 from bs4 import BeautifulSoup
@@ -8,8 +7,10 @@ from typing import List
 import random
 import json
 
+from src.utility import get_request
+
 class AbstractScrapper(ABC):
-    # Your raw data lists
+    #ToAdd: Add to .env
     proxies = [
         {"http": "http://192.168.1.1:8080", "https": "http://192.168.1.1:8080"},
         {"http": "http://10.0.0.5:8080", "https": "http://10.0.0.5:8080"}
@@ -31,27 +32,28 @@ class AbstractScrapper(ABC):
         pass
 
 class RekruteScrapper(AbstractScrapper):
-    MAX_PAGES = 2
+    MAX_PAGES = 2 #ToChange: changin in production
 
     def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str):
         self.redis = redis_client
         self.producer = kafka_producer
         self.base_url = base_url
+        #ToAdd: Add to .env
         self.topic = "rekrut_raw_jobs"
         self.CACHE_TTL = 48 * 60 * 60 
 
     def _extract_job_links(self, html: str) -> List[str]:
         soup = BeautifulSoup(html, 'html.parser')
-        # You would find the correct selector using the 'Inspect' tool in Chrome
+        #ToAdd: Add to .env
         links = [a['href'] for a in soup.select('a.titreJob')] #TODO: Use rekrut CSS specifier
         return [f"https://www.rekrute.com{link}" for link in links] #Use rekrute link
 
     def scrape(self) -> None:
-        # Step 1: Initialize the Pagination Sequence
+        # Initialize the Pagination Sequence
         for page in range(1, self.MAX_PAGES + 1):
             page_url = f"{self.base_url}?s=3&p={page}&o=1"
             
-            # Step 2: Retrieve and Extract the Search Page
+            # SRetrieve and Extract the Search Page
             current_proxy = self.get_random_proxy()
             current_ua = self.get_random_user_agent()
             search_html = get_request(
@@ -62,31 +64,34 @@ class RekruteScrapper(AbstractScrapper):
             if not search_html:
                 logging.warning(f"Failed to fetch page {page}. Skipping.")
                 continue
+            #ToRemove: For Dev Mode
             print(f"Page HTML fetched SUCCEFULLY {page}")
             job_links = self._extract_job_links(search_html)
 
-            # Step 3a: Evaluate 'Early Stop' Condition (Empty Page)
+            #Check for Empty Page
             if not job_links:
                 print(f"No jobs found on page {page}. Stopping scraping run.")
                 break
 
-            # Step 3b: Evaluate 'Early Stop' Condition (All jobs cached)
-            # We count how many jobs on this page are already in Redis
+            #If All Jobs are Cachecd
             already_seen_count = 0
             for link in job_links:
                 if self.redis.exists(f"rekrut:seen:{link}"):
                     already_seen_count += 1
             
             if already_seen_count == len(job_links):
+                #ToRemove: For Dev Mode
                 print(f"All {len(job_links)} jobs on page {page} are already cached. Caught up to history. Stopping.")
                 break
 
-            # Step 4: Process the Unknown Jobs
+            #Upload Jobs
             for link in job_links:
+                #Skiping Cacked Jobs
                 if self.redis.exists(f"rekrut:seen:{link}"):
-                    continue  # Skip jobs we've already processed
+                    continue
 
-                # Step 5: Fetch Full Job Details
+                #Fetch New Jobs
+                #ToRemove: For Dev Mode
                 print(f"Fetching new job: {link}")
                 job_html = get_request(
                     url=link, 
@@ -94,25 +99,29 @@ class RekruteScrapper(AbstractScrapper):
                     user_agent=current_ua
                 )
                 if not job_html:
+                    #ToRemove: For Dev Mode
                     logging.warning(f"Failed to fetch job HTML {link}. Skipping.")
                     continue
+                #ToRemove: For Dev Mode
                 print(f"Job HTML Ftech SECSSFULLY {link}")
 
-                # Step 6: Distribute and Memorize
+                #Adding to Kafka queue and Redis cache
                 try:
-                    # Package and push to Kafka
+                    #Push to Kafka queue
                     payload = json.dumps({"source": "rekrut", "url": link, "html": job_html})
                     self.producer.produce(self.topic, key=link, value=payload)
+                    #ToRemove: For Dev Mode
                     print(f"Adding Job to Kafka: {link}")
                     
-                    # Record in Redis with 48h TTL immediately after successful push
+                    #Push to Redis cache
                     self.redis.setex(f"rekrut:seen:{link}", self.CACHE_TTL, "1")
+                    #ToRemove: For Dev Mode
                     print(f"Adding Job Link to Redis: {link}")
                     
                 except Exception as e:
                     logging.error(f"Failed to process {link} to Kafka/Redis: {e}")
 
-            # Force Kafka to send the batch of messages at the end of every page
+            #Flush Kafka Memory
             self.producer.flush()
-
+        #ToRemove: For Dev Mode
         print("Scraping run completed successfully.")
