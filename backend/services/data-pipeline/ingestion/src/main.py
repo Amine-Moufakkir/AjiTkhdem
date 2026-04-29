@@ -1,25 +1,19 @@
-from fastapi import FastAPI
-# pattern: from src.folder_name.file_name import ClassName
-
+import time
 from src.orchestrator.orchestrator import Orchestrator
 from src.scheduler.scheduler import Scheduler 
 
-app = FastAPI(title="AjiTkhdem - IngestionService")
-
 if __name__ == "__main__":
-    # Target sites to scrape
+    time.sleep(10)
+    # ToAdd: Add it In .env
     targets = [
-        {"site": "rekrute", "url": "https://www.rekrute.com/offres.html"},
-        {"site": "emploi.ma", "url": "https://www.emploi.ma/recherche-jobs-maroc"}
+        {"site": "rekrute", "url": "https://www.rekrute.com/offres.html"}
     ]
 
     orchestrateur = Orchestrator()
     
-    # Pass the lists to the Scheduler
     scheduler = Scheduler(
         orchestrator=orchestrateur
     )
 
-    # Run them one by one
     for target in targets:
         scheduler.schedule(site_name=target["site"], url=target["url"])
