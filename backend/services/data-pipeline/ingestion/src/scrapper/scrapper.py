@@ -11,18 +11,14 @@ import json
 class AbstractScrapper(ABC):
     # Your raw data lists
     proxies = [
-            {"http://": "http://192.168.1.1:8080", "https://": "http://192.168.1.1:8080"},
-            {"http://": "http://10.0.0.5:8080", "https://": "http://10.0.0.5:8080"}
-        ]
-        
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+        {"http": "http://192.168.1.1:8080", "https": "http://192.168.1.1:8080"},
+        {"http": "http://10.0.0.5:8080", "https": "http://10.0.0.5:8080"}
     ]
-
-    def __init__(self, url: str):
-        self.url = url
+    
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)..."
+    ]
 
     def get_random_proxy(self) -> dict:
         return random.choice(self.proxies)
@@ -34,8 +30,8 @@ class AbstractScrapper(ABC):
     def scrape(self):
         pass
 
-class RekruteScrapper:
-    MAX_PAGES = 50
+class RekruteScrapper(AbstractScrapper):
+    MAX_PAGES = 2
 
     def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str):
         self.redis = redis_client
@@ -52,9 +48,7 @@ class RekruteScrapper:
 
     def scrape(self) -> None:
         # Step 1: Initialize the Pagination Sequence
-        for page in range(1, MAX_PAGES + 1):
-            logging.info(f"--- Processing Page {page} ---")
-            #TODO: Using paginition pattren for rekrute
+        for page in range(1, self.MAX_PAGES + 1):
             page_url = f"{self.base_url}?s=3&p={page}&o=1"
             
             # Step 2: Retrieve and Extract the Search Page
@@ -68,12 +62,12 @@ class RekruteScrapper:
             if not search_html:
                 logging.warning(f"Failed to fetch page {page}. Skipping.")
                 continue
-
+            print(f"Page HTML fetched SUCCEFULLY {page}")
             job_links = self._extract_job_links(search_html)
 
             # Step 3a: Evaluate 'Early Stop' Condition (Empty Page)
             if not job_links:
-                logging.info(f"No jobs found on page {page}. Stopping scraping run.")
+                print(f"No jobs found on page {page}. Stopping scraping run.")
                 break
 
             # Step 3b: Evaluate 'Early Stop' Condition (All jobs cached)
@@ -84,7 +78,7 @@ class RekruteScrapper:
                     already_seen_count += 1
             
             if already_seen_count == len(job_links):
-                logging.info(f"All {len(job_links)} jobs on page {page} are already cached. Caught up to history. Stopping.")
+                print(f"All {len(job_links)} jobs on page {page} are already cached. Caught up to history. Stopping.")
                 break
 
             # Step 4: Process the Unknown Jobs
@@ -93,20 +87,27 @@ class RekruteScrapper:
                     continue  # Skip jobs we've already processed
 
                 # Step 5: Fetch Full Job Details
-                logging.info(f"Fetching new job: {link}")
-                job_html = get_request(link, proxy={}, user_agent="Mozilla/5.0...")
+                print(f"Fetching new job: {link}")
+                job_html = get_request(
+                    url=link, 
+                    proxy=current_proxy, 
+                    user_agent=current_ua
+                )
                 if not job_html:
+                    logging.warning(f"Failed to fetch job HTML {link}. Skipping.")
                     continue
+                print(f"Job HTML Ftech SECSSFULLY {link}")
 
                 # Step 6: Distribute and Memorize
                 try:
                     # Package and push to Kafka
                     payload = json.dumps({"source": "rekrut", "url": link, "html": job_html})
-                    print(payload)
                     self.producer.produce(self.topic, key=link, value=payload)
+                    print(f"Adding Job to Kafka: {link}")
                     
                     # Record in Redis with 48h TTL immediately after successful push
                     self.redis.setex(f"rekrut:seen:{link}", self.CACHE_TTL, "1")
+                    print(f"Adding Job Link to Redis: {link}")
                     
                 except Exception as e:
                     logging.error(f"Failed to process {link} to Kafka/Redis: {e}")
@@ -114,4 +115,4 @@ class RekruteScrapper:
             # Force Kafka to send the batch of messages at the end of every page
             self.producer.flush()
 
-        logging.info("Scraping run completed successfully.")
+        print("Scraping run completed successfully.")

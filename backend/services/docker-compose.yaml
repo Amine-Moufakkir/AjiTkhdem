@@ -13,6 +13,7 @@ services:
       - "9092:9092"
     environment:
       # 🔹 Mode KRaft
+      CLUSTER_ID: "qtU3_Z7ST66u8S69m09C-g"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_NODE_ID: 1
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
@@ -22,6 +23,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
 
       # 🔹 Storage
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
@@ -56,7 +58,7 @@ services:
       - KAFKA_BROKER=kafka:9092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    restart: always
+      - PYTHONUNBUFFERED=1
 
   # preprocessing-service:
   #   build: ./data-pipline/pre-processing

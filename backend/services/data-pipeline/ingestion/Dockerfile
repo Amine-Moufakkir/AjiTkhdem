@@ -39,5 +39,4 @@ RUN chown -R kafkauser:kafkauser /app /opt/venv
 
 USER kafkauser
 
-# FASTAPI UPDATE: Use Uvicorn to serve the app on all network interfaces
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "src/main.py"]

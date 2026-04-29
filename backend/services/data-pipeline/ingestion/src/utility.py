@@ -2,11 +2,12 @@ import httpx
 
 def get_request(url: str, proxy: dict, user_agent: str):
     headers = {"User-Agent": user_agent}
+    # proxy_url = proxy.get("https")
+
     try:
-        with httpx.Client(proxies=proxy, headers=headers, timeout=10.0) as client:
+        with httpx.Client(headers=headers, timeout=10.0) as client:
             response = client.get(url)
             response.raise_for_status() 
-            print(f"Successfully fetched {url} | Status: {response.status_code}")
             return response.text
 
     except httpx.HTTPStatusError as e:
