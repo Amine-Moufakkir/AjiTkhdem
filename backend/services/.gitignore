@@ -65,7 +65,9 @@ build/
 **/.env
 **/.env.**
 
-**/context
+**/.context
 **/ai
+
+**/context 
 
 
