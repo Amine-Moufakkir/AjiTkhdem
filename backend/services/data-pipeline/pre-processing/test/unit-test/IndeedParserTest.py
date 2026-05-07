@@ -28,7 +28,10 @@ def main():
     # Étape 1: Nettoyage
     print("\n📋 Étape 1: Nettoyage du HTML...")
     cleaner = Cleaner()
-    html_clean = cleaner.clean(html_brut)
+    html_clean = {
+                "html":cleaner.clean(html_brut) , 
+                "url":"https://ma.indeed.com/?r=us&vjk=0a5d0000df3de9f4"
+                  }
     print(f"✓ HTML nettoyé ({len(html_clean)} caractères)")
     
     # Étape 2: Extraction

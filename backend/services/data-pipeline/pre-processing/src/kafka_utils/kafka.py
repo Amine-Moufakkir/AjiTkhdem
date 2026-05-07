@@ -48,19 +48,3 @@ class Kafka:
 
 
 
-
-    def send(self, topic, data, category):
-        """Prend des données avec une catégorie et les met en file Kafka."""
-        if self.producer is None:
-            self.connect()
-            
-        payload = {
-            "category": category,
-            "data": data
-        }
-        
-        try:
-            self.producer.send(topic, value=payload)
-            self.producer.flush()
-        except Exception as e:
-            print(f"Erreur lors de l'envoi du message : {e}")
