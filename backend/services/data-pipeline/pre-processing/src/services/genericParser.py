@@ -3,36 +3,50 @@ from abc import ABC, abstractmethod
 
 from core.HashGenerator import HashGenerator
 from core.Cleaner import Cleaner
+from models.db import MongoDB
+from datetime import datetime
 
 # --- Classes définies à l'extérieur (Ailleurs) ---
 
 
 class GenericParser(ABC):
-    def __init__(self):
+    def __init__(self , hash_generator: HashGenerator , db: MongoDB):
         # On instancie les classes définies ailleurs
         self.cleaner = Cleaner()
-        self.hash_generator = HashGenerator()
+        self.hash_generator = hash_generator
+        self.db = db  
 
 
 
-    def __extract(self, raw_data: str) -> str:
+    def __extract(self, raw_data: dict) -> dict:
         """Méthode privée d'extraction."""
         # Logique simulée : on pourrait imaginer une extraction de JSON ou RegEx ici
         return raw_data
 
-    def pipeline(self, data: str):
+    async def  pipeline(self, data: dict):
         """Méthode publique : le chef d'orchestre."""
-        # 1. Extraction (Privée)
-        extracted = self.__extract(data)
         
-        # 2. Nettoyage
-        cleaned = self.cleaner.clean(extracted)
+        if data["html"] is None : 
+             raise RuntimeError("Le contenu HTML de l'offre est vide") 
+        
+        cleaned_data = data  
+        cleaned_data["html"] = self.cleaner.clean(data["html"])
+
+        extracted = self.__extract(cleaned_data)
+        
+       
         
         # 3. Hachage
-        data_id = self.hash_generator.generate(cleaned)
+        hash_value = self.hash_generator.generate(extracted)
         
-        # 4. Traitement final (Abstrait)
-        # return self.process(data_id, cleaned)
+
+        meta_data = {
+            "created_at":datetime.now(),
+            "url":data["url"],
+        }
+
+        is_processed = await self.db.upsert_by_hash(hash_value, extracted , meta_data) 
+
 
 
 
