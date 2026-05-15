@@ -112,7 +112,7 @@ class Kafka:
                 )
                 self.producer.flush()
 
-                time.sleep(1)
+                time.sleep(1000)
                 return True
             except Exception as e:
                 print(f"❌ Impossible de republier pour retry : {e}")
@@ -196,6 +196,7 @@ class Kafka:
                      yield {
                         "topic": message.topic,
                         "data": message.value,
+                        "headers": message.headers
                     }
                 else :
                      if self.producer is None :  
@@ -209,6 +210,7 @@ class Kafka:
             yield {
                 "topic": message.topic,
                 "data": message.value,
+                "headers": message.headers
             }
 
    

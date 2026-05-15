@@ -20,10 +20,8 @@ class Route:
         """
         self.kafka = kafka
         self.parser_factory = parser_factory
-        self.output_topic = ["normalization"]
-
-        #* Liste des topics à surveiller
-        self.topics = ["pre-processing"]
+       
+        
         
     async def main(self, input_topic: str):
         """
@@ -48,7 +46,7 @@ class Route:
             print(f"🚀 Démarrage de la Route - Écoute du topic: {input_topic}")
             self.kafka.connect()
                 
-            for message in self.kafka.listen(input_topic):
+            for message in self.kafka.listen():
                 try:
                     jobScrapeDTO = JobScrapeDTO(message)
                     
@@ -76,8 +74,8 @@ class Route:
                     
                     if result:
                         
-                        self.kafka.send_on_succes(self.output_topic, result, [])
-                        print(f"✅ Résultat envoyé au topic '{self.output_topic}'")
+                        self.kafka.send_on_succes( result, [])
+                        
                     else:
                         print(f"⚠️ Aucun résultat à envoyer (doublon détecté)")
 
@@ -86,18 +84,22 @@ class Route:
                         
                 except ValueError as e:
                     print(f"❌ Erreur - Type de parser invalide: {e}")
+                    #! Doit etre journaliser
+                    self.kafka.handle_process_failure(message["topic"], message["data"], message["headers"], e)
                     
                     #! Doit etre journaliser 
                     
                 except RuntimeError as e:
                     print(f"❌ Erreur runtime lors du traitement: {e}")
                     #! Doit etre journaliser
-                    self.kafka.handle_process_failure(input_topic, data, [], e)
+                    self.kafka.handle_process_failure(message["topic"], message["data"], message["headers"], e)
+
                     
                 except Exception as e:
                     print(f"❌ Erreur inattendue lors du traitement: {e}")
                     #! Doit etre journaliser
-                    self.kafka.handle_process_failure(input_topic, data, [], e)
+                    self.kafka.handle_process_failure(message["topic"], message["data"], message["headers"], e)
+
 
 
         
@@ -124,7 +126,7 @@ class Route:
             
             # Essayer d'envoyer un message de test
             test_message = {"test": "connection", "timestamp": str(__import__('datetime').datetime.now())}
-            future = self.kafka.send_on_succes("test-topic", test_message , headers=[])
+            future = self.kafka.send_on_succes("test-topic", test_message )
             
             # Attendre la confirmation
             record_metadata = future.get(timeout=10)
