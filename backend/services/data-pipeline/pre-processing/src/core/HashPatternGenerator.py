@@ -13,7 +13,7 @@ class HashPatternGenerator(HashGenerator):
     Exemple: pattern = "company_ref-job_ref-site"
     """
     
-    def __init__(self, pattern: str):
+    def __init__(self, pattern: str = ''):
         """
         Args:
             pattern: Chaîne définissant les attributs séparés par '-'
@@ -23,6 +23,8 @@ class HashPatternGenerator(HashGenerator):
         # Liste des noms d'attributs dans l'ordre
         self.attributes = pattern.split('-')
     
+  
+      
     def setPattern(self, pattern: str):
         self.pattern = pattern
         self.attributes = pattern.split('-')

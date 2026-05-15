@@ -1,8 +1,11 @@
 
+from __future__ import annotations # Pour accepter le type | None sans erreur
 from abc import ABC, abstractmethod
 
 from core.HashGenerator import HashGenerator
 from core.Cleaner import Cleaner
+from dto.DataProcessingDTO import DataProcessingDTO
+from dto.JobCleanedDTO import JobCleanedDTO
 from models.db import MongoDB
 from datetime import datetime
 
@@ -18,52 +21,41 @@ class GenericParser(ABC):
 
 
 
-    def __extract(self, raw_data: dict) -> dict:
+    def __extract(self, raw_data:DataProcessingDTO ) -> JobCleanedDTO | None:
         """Méthode privée d'extraction."""
         # Logique simulée : on pourrait imaginer une extraction de JSON ou RegEx ici
-        return raw_data
+        return JobCleanedDTO() 
 
-    async def  pipeline(self, data: dict):
+    async def  pipeline(self, data: DataProcessingDTO) ->JobCleanedDTO | None:
         """Méthode publique : le chef d'orchestre."""
         
-        if data["html"] is None : 
+        if data.html is None : 
              raise RuntimeError("Le contenu HTML de l'offre est vide") 
-        
-        cleaned_data = data  
-        cleaned_data["html"] = self.cleaner.clean(data["html"])
+         
+        cleaned_data = data 
+        cleaned_data.html = self.cleaner.clean(data.html)
 
         extracted = self.__extract(cleaned_data)
+        # Retourne un JobCleanedDTO
+
+        
+        if extracted is None:
+            raise RuntimeError("Extraction de l'offre d'emploi impossible")
+        dict_extracted = extracted.to_dict()
         
        
         
         # 3. Hachage
-        hash_value = self.hash_generator.generate(extracted)
+        hash_value = self.hash_generator.generate(dict_extracted)
         
 
         meta_data = {
             "created_at":datetime.now(),
-            "url":data["url"],
+            "url":data.url,
         }
 
-        is_processed = await self.db.upsert_by_hash(hash_value, extracted , meta_data) 
+        is_processed = await self.db.upsert_by_hash(hash_value, dict_extracted , meta_data) 
 
-
-
-
-
-#     @abstractmethod
-#     def process(self, data_id: str, data: str):
-#         """À implémenter dans les classes filles (ex: KafkaPublisher)."""
-#         pass
-
-# # --- Implémentation concrète ---
-
-# class KafkaParser(GenericParser):
-#     def process(self, data_id: str, data: str):
-#         print(f"DEBUG: Envoi vers Kafka...")
-#         print(f"ID: {data_id} | Payload: {data}")
-
-# # Test
-# if __name__ == "__main__":
-#     p = KafkaParser()
-#     p.pipeline("   donnée brute de kafka   ")
+        if is_processed:
+            return extracted 
+        return None

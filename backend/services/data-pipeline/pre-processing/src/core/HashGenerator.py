@@ -2,6 +2,8 @@
 
 import hashlib
 
+from dto.DataProcessingDTO import DataProcessingDTO
+
 
 
 

@@ -14,6 +14,8 @@ class MongoDB:
     Gestion des documents dans MongoDB avec recherche par hash.
     """
     
+    
+    
     def __init__(self, mongo_connection: MongoConnection, collection_name: str = "raw_data"):
         """
         Args:
@@ -22,6 +24,12 @@ class MongoDB:
         """
         self.mongo = mongo_connection
         self.collection_name = collection_name
+    
+
+
+    def getMongoConnection(self):
+        return self.mongo
+    
     
     async def find_by_hash(self, hash_value: str) -> Optional[Dict[str, Any]]:
         """

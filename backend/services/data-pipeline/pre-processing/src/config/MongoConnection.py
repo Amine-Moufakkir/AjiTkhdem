@@ -7,6 +7,7 @@ load_dotenv()
 class MongoConnection:
     def __init__(self):
         
+        
         self.uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
         self.db_name = os.getenv("MONGO_DB_NAME", "job-scraper")
         self.client = None

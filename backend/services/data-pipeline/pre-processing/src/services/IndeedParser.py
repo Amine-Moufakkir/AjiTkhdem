@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 
 from core.HashGenerator import HashGenerator
 from core.HashPatternGenerator import HashPatternGenerator
+from dto.DataProcessingDTO import DataProcessingDTO
+from dto.JobCleanedDTO import JobCleanedDTO
 from models.db import MongoDB
 from .genericParser import GenericParser
 import re
@@ -14,7 +16,7 @@ class IndeedParser(GenericParser):
         hash_generator.setPattern("site-job_title-job_ref-company_location-job_type-job_description")
         super().__init__(hash_generator , db)
 
-    def extract(self, cleaned_html: dict) -> dict:
+    def extract(self, cleaned_html: DataProcessingDTO) -> JobCleanedDTO:
         """
         Extrait les informations d'une offre d'emploi Indeed depuis le HTML nettoyé.
         
@@ -30,18 +32,32 @@ class IndeedParser(GenericParser):
             - job_type: Type de contrat
             - job_description: Description complète
         """
-        soup = BeautifulSoup(cleaned_html["html"], 'lxml')
+        soup = BeautifulSoup(cleaned_html.html, 'lxml')
+
+        extracted_data  =  JobCleanedDTO()
+        extracted_data.site = "Indeed"
+        extracted_data.job_title = self._extract_job_title(soup)
+        extracted_data.job_ref = self._extract_vjk_from_url(cleaned_html.url)
+        extracted_data.company = self._extract_company(soup)
+        extracted_data.location = self._extract_location(soup)
+        extracted_data.job_type = self._extract_job_type(soup)
+        extracted_data.job_description = self._extract_job_description(soup)
+        extracted_data.url = cleaned_html.url
+
+
+        # {
+        #     'site': "Indeed",
+        #     'job_title': self._extract_job_title(soup),
+        #     'job_ref': self._extract_vjk_from_url(cleaned_html.url),
+        #     'company': self._extract_company(soup),
+        #     'location': self._extract_location(soup),
+        #     'job_type': self._extract_job_type(soup),
+        #     'job_description': self._extract_job_description(soup),
+        # }
+     
+
         
-        return {
-            'site': "Indeed",
-            'job_title': self._extract_job_title(soup),
-            'job_ref': self._extract_vjk_from_url(cleaned_html["url"]),
-            'company': self._extract_company(soup),
-            'location': self._extract_location(soup),
-            'job_type': self._extract_job_type(soup),
-            'job_description': self._extract_job_description(soup),
-        }
-    
+        return extracted_data 
 
 
 
