@@ -112,7 +112,7 @@ class Kafka:
                 )
                 self.producer.flush()
 
-                time.sleep(1000)
+                
                 return True
             except Exception as e:
                 print(f"❌ Impossible de republier pour retry : {e}")
@@ -203,7 +203,8 @@ class Kafka:
                       raise Exception("Le producteur n'a pas encore été initialisé.")
                      self.producer.send(topic=topic, value=message.value, headers=message.headers)
                      self.producer.flush()
-                    
+                     time.sleep(1)
+                     return 
                 
 
             # 5. On renvoie tout dans le dictionnaire pour que le pipeline y ait accès
@@ -211,7 +212,7 @@ class Kafka:
                 "topic": message.topic,
                 "data": message.value,
                 "headers": message.headers
-            }
+            } 
 
    
 
