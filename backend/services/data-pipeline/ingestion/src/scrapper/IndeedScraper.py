@@ -1,3 +1,5 @@
+from scrapper.scrapper import AbstractScrapper
+
 import asyncio
 import logging
 import random
@@ -23,7 +25,7 @@ class RedisService:
         raise NotImplementedError
 
  
-class IndeedScraper:
+class IndeedScraper(AbstractScrapper):
     """
     Lightweight async scraper for a single Indeed job search page.
     
