@@ -49,7 +49,7 @@ class Employe(Base):
     name: Mapped[str] = mapped_column(String(255), unique=True)
     social_media: Mapped[Optional[str]] = mapped_column(String(255))
 
-    entreprise_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entreprise.id"))
+    entreprise_id: Mapped[Optional[str]] = mapped_column(ForeignKey("entreprise.id"))
     entreprise: Mapped["Entreprise"] = relationship(back_populates="employes")
 
 class SourcePlatform(Base):

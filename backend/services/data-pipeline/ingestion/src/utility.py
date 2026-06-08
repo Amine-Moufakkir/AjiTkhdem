@@ -1,5 +1,8 @@
 import httpx
 
+
+
+#! dans cette methode on utilse pas les proxies
 def get_request(url: str, proxy: dict, user_agent: str):
     headers = {"User-Agent": user_agent}
     # proxy_url = proxy.get("https")

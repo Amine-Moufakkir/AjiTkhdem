@@ -6,7 +6,7 @@ import os
 # Ajout du chemin src au PYTHONPATH pour les imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from kafka.Kafka import Kafka
+from kafka_client.KafkaClient import Kafka
 from core.Route import Route
 from config.db import AsyncSessionLocal
 
@@ -29,7 +29,7 @@ async def main():
     # Ces valeurs pourraient être extraites des variables d'environnement
     TOPIC_INPUT = "normalisation"
     TOPIC_OUTPUT = "normalized_jobs"
-    BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+    BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
     # Instanciation de Kafka
     kafka_service = Kafka(

@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 
 class Kafka:
-    def __init__(self, topic_output,topics_inputs:list  ,  bootstrap_servers='kafka:9092', max_retries=5, base_delay=1, max_delay=60):
+    def __init__(self, topic_output,topics_inputs:list  ,  bootstrap_servers='localhost:9092', max_retries=5, base_delay=1, max_delay=60):
         """
         Args:
             bootstrap_servers: Adresse du broker Kafka
