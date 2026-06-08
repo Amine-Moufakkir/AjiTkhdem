@@ -4,8 +4,34 @@ import sys
 import time
 import json
 from kafka import KafkaProducer
+from kafka.admin import KafkaAdminClient, NewTopic
 from datetime import datetime, timezone
 import uuid
+# Monkey-patch de KafkaConsumer pour le test :
+# 1. 'consumer_timeout_ms=5000' empêche le consommateur de bloquer indéfiniment.
+# 2. 'group_id' unique garanti que le test lira toujours le message même si un autre service (ex: Docker) tourne.
+import kafka
+original_kafka_consumer = kafka.KafkaConsumer
+
+class TestKafkaConsumer(original_kafka_consumer):
+    def __init__(self, *args, **kwargs):
+        kwargs['consumer_timeout_ms'] = 8000
+        # On désactive le groupe pour éviter les bugs du coordinateur kafka-python
+        kwargs['group_id'] = None
+        super().__init__(*args, **kwargs)
+
+    def subscribe(self, topics, *args, **kwargs):
+        from kafka import TopicPartition
+        tps = [TopicPartition(t, 0) for t in topics]
+        print(f"[TestKafkaConsumer] Manual assignment aux partitions: {tps}")
+        self.assign(tps)
+        # On se place à la fin pour ne lire que notre nouveau message
+        self.seek_to_end()
+
+kafka.KafkaConsumer = TestKafkaConsumer
+import src.kafka_client.KafkaClient as kafka_module
+kafka_module.KafkaConsumer = TestKafkaConsumer
+
 from src.config.db import AsyncSessionLocal, engine
 from src.models.base import Base, Entreprise, Job
 from src.main import main
@@ -25,6 +51,30 @@ class MockProducer:
             bootstrap_servers=self.bootstrap_servers,
             value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
+        
+        # Création des topics avant de lancer les tests pour éviter les erreurs "not found in cluster metadata"
+        try:
+            admin_client = KafkaAdminClient(bootstrap_servers=self.bootstrap_servers)
+            existing_topics = admin_client.list_topics()
+            
+            topics_to_create = ["normalisation", "normalized_jobs"]
+            for i in range(1, 6):
+                topics_to_create.append(f"normalisation_retry_{i}")
+                
+            new_topics = []
+            for t in topics_to_create:
+                if t not in existing_topics:
+                    # Configuration std: 1 partition, facteur de replication 1 (local Kafka)
+                    new_topics.append(NewTopic(name=t, num_partitions=1, replication_factor=1))
+                    
+            if new_topics:
+                print(f"[MockProducer] Création des topics manquants : {[t.name for t in new_topics]}")
+                admin_client.create_topics(new_topics=new_topics, validate_only=False)
+            
+            admin_client.close()
+        except Exception as e:
+            print(f"[MockProducer] Avertissement: Impossible de créer les topics automatiquement ({e})")
+            
 
 
     def send(self, topic, message=None):
@@ -78,34 +128,35 @@ async def run_test():
         print(f"✗ Erreur de connexion à la base de données : {e}")
         return False
 
-    # 2. Préparation du message de test
+    import threading
     
-    # 3. Utilisation du MockProducer pour envoyer le message au topic réel
-    try:
-        producer = MockProducer()
-        producer.send( topic = "normalisation")
-    except Exception as e:
-        print(f"✗ Erreur lors de l'envoi au broker Kafka : {e}")
-        print("Vérifiez que le serveur Kafka est accessible.")
-        return False
+    # On définit une fonction pour envoyer le message dans un thread séparé
+    def delayed_send():
+        print("[Thread Produit] En attente de 2 secondes avant l'envoi...")
+        time.sleep(2)
+        try:
+            print("[Thread Produit] Connexion au producteur...")
+            producer = MockProducer()
+            producer.send(topic="normalisation")
+            print("[Thread Produit] Message envoyé !")
+        except Exception as e:
+            print(f"[Thread Produit] ✗ Erreur lors de l'envoi : {e}")
 
-    # 4. Attente de 2 secondes pour laisser le temps au broker de traiter
-    print("Attente de 2 secondes...")
-    await asyncio.sleep(2)
+    # Lancement du thread producteur
+    t = threading.Thread(target=delayed_send)
+    t.daemon = True
+    t.start()
 
-    # 5. Appel de la méthode main pour traiter le message
-    # main() est une boucle infinie de consommation Kafka, on lui donne un timeout
-    print("Appel de la méthode main() pour la consommation (Timeout 15s)...")
+    # Appel de la méthode main pour traiter le message (sur la boucle d'événements courante)
+    print("Appel de la méthode main() pour la consommation (le thread principal va bloquer temporairement)...")
     try:
-        # On lance le service de normalisation réel
-        await asyncio.wait_for(main(), timeout=15)
-    except asyncio.TimeoutError:
-        print("Fin du temps imparti pour le traitement (Timeout atteint, c'est normal).")
+        # main() va bloquer la boucle d'événements pendant au maximum consumer_timeout_ms (5s)
+        # s'il n'y a pas de message. Mais notre thread va envoyer un message après 2s !
+        await main()
     except Exception as e:
         print(f"Erreur durant l'exécution de main() : {e}")
-        # On ne s'arrête pas forcément ici si c'est juste un arrêt propre
 
-    # 6. Vérification de la persistance en base de données
+    # Vérification de la persistance en base de données
     print("Vérification de la base de données...")
     async with AsyncSessionLocal() as session:
         # Recherche de l'entreprise créée
