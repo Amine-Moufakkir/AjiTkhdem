@@ -16,7 +16,8 @@ from src.utility import get_request
 class RekruteScrapper(AbstractScrapper):
     MAX_PAGES = 2 #ToChange: changin in production
 
-    def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str):
+    def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str, context: Optional[ScrapingContext] = None):
+        super().__init__(context=context)
         self.redis = redis_client
         self.producer = kafka_producer
         self.base_url = base_url
@@ -36,8 +37,9 @@ class RekruteScrapper(AbstractScrapper):
             page_url = f"{self.base_url}?s=3&p={page}&o=1"
             
             # SRetrieve and Extract the Search Page
-            current_proxy = self.get_random_proxy()
-            current_ua = self.get_random_user_agent()
+            current_proxy = self.context.proxy if self.context else None
+            current_ua = self.context.user_agent if self.context else None
+            
             search_html = get_request(
                 url=page_url, 
                 proxy=current_proxy, 

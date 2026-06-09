@@ -1,36 +1,99 @@
-from src.scrapper.scrapper import AbstractScrapper
-from src.scrapper.scrapper import RekruteScrapper
+import random
 import redis
+import logging
+import asyncio
 from confluent_kafka import Producer
+from src.scrapper.scrapper import AbstractScrapper
+from src.scrapper.RekruteScrapper import RekruteScrapper
+from src.scrapper.IndeedScraper import IndeedScraper
+from .context import ContextGenerator, ScrapingContext
+
+logger = logging.getLogger(__name__)
+
+
 class Orchestrator:
-    def __init__(self):
-        #Redis Client Initiate
+    def __init__(
+        self,
+        redis_host: str = "redis",
+        redis_port: int = 6379,
+        kafka_bootstrap_servers: str = "kafka:9092",
+        min_delay: float = 1.0,
+        max_delay: float = 3.0,
+    ):
         self.redis_client = redis.Redis(
-            host='redis', 
-            port=6379, 
+            host=redis_host,
+            port=redis_port,
             db=0,
-            decode_responses=True
+            decode_responses=True,
         )
 
-        #Kafka Producer Initiate
         kafka_conf = {
-            'bootstrap.servers': 'kafka:9092',
-            'client.id': 'ingestion-service',
-            # Automatically retry if the broker isn't ready yet
-            'reconnect.backoff.ms': 1000,
-            'reconnect.backoff.max.ms': 10000,
+            "bootstrap.servers": kafka_bootstrap_servers,
+            "client.id": "ingestion-service",
+            "reconnect.backoff.ms": 1000,
+            "reconnect.backoff.max.ms": 10000,
         }
         self.kafka_producer = Producer(kafka_conf)
+        self.context_generator = ContextGenerator(min_delay=min_delay, max_delay=max_delay)
 
-    def create_scraper(self, site_name: str, url: str) -> AbstractScrapper:        
+    def _generate_context(self) -> ScrapingContext:
+        return self.context_generator.generate()
+
+    def create_scraper(self, site_name: str, url: str) -> AbstractScrapper:
         name = site_name.lower()
-        #ToAdd: Add to .env
+        context = self._generate_context()
+
         if name == "rekrute":
-            return RekruteScrapper(
+            scraper = RekruteScrapper(
                 redis_client=self.redis_client,
                 kafka_producer=self.kafka_producer,
-                base_url=url
+                base_url=url,
+                context=context
             )
-        # To add other scrapers later, just add more conditions here
+            return scraper
+        elif name == "indeed":
+            scraper = IndeedScraper(
+                redis_service=self.redis_client,
+                headless=True,
+                min_delay=context.min_delay,
+                max_delay=context.max_delay,
+                context=context
+            )
+            return scraper
         else:
             raise ValueError(f"Le scraper pour le site '{site_name}' n'existe pas.")
+
+    def select_next_site(self, sites_config: dict[str, str]) -> tuple[str, str]:
+        """
+        Selects the next site to scrape from the available configurations.
+        Decision-making can be randomized or based on priority/load.
+        """
+        if not sites_config:
+            raise ValueError("No sites available for scraping")
+
+        site_name = random.choice(list(sites_config.keys()))
+        url = sites_config[site_name]
+        return site_name, url
+
+    async def run_scraping_session(self, site_name: str, url: str) -> dict:
+        """
+        Executes a scraping session for a specific site.
+        Handles both sync and async scrapers.
+        """
+        scraper = self.create_scraper(site_name=site_name, url=url)
+        context = scraper.context
+        logger.info(f"Running scraper for {site_name} with context: UA={context.user_agent[:50]}...")
+
+        try:
+            if asyncio.iscoroutinefunction(scraper.scrape) or asyncio.iscoroutine(scraper.scrape):
+                await scraper.scrape(url) if site_name.lower() == "indeed" else await scraper.scrape()
+            else:
+                # If the scraper.scrape is not a coroutine function but it returns a coroutine
+                result = scraper.scrape(url) if site_name.lower() == "indeed" else scraper.scrape()
+                if asyncio.iscoroutine(result):
+                    await result
+        except Exception as e:
+            logger.error(f"Error during scraping session for {site_name}: {e}")
+            return {"site": site_name, "status": "failed", "error": str(e)}
+
+        return {"site": site_name, "status": "completed"}

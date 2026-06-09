@@ -1,10 +1,8 @@
-from scrapper.scrapper import AbstractScrapper
-
 import asyncio
 import logging
 import random
 from typing import List, Optional, Callable, Any
-from playwright.async_api import async_playwright, Browser, Page, BrowserContext  ,ViewportSize
+from playwright.async_api import async_playwright, Browser, Page, BrowserContext, ViewportSize
 from functools import partial
 
 logger = logging.getLogger(__name__)
@@ -31,29 +29,12 @@ class IndeedScraper(AbstractScrapper):
     
     Features:
     - Single-page scraping (no pagination)
-    - User agent randomization
+    - Context-aware anonymity (User-Agent, Proxy, Viewport, etc.)
     - Realistic browser context (viewport, locale, timezone)
     - Light stealth behavior (delay callbacks, scrolling)
     - Dependency injection for Redis interaction
     - Simple, modular design
     """
-
-    # Realistic user agents to randomize
-    USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
-    ]
-
-    # Realistic viewport sizes
-    VIEWPORTS = [
-        {"width": 1920, "height": 1080},
-        {"width": 1366, "height": 768},
-        {"width": 1440, "height": 900},
-        {"width": 1280, "height": 800},
-    ]
 
     def __init__(
         self,
@@ -61,10 +42,9 @@ class IndeedScraper(AbstractScrapper):
         headless: bool = False,
         min_delay: float = 1.0,
         max_delay: float = 3.0,
+        context: Optional[ScrapingContext] = None,
     ):
-        """browser
-
-
+        """
         Initialize the IndeedScraper.
 
         Args:
@@ -72,7 +52,9 @@ class IndeedScraper(AbstractScrapper):
             headless: Run browser in headless mode (default: False)
             min_delay: Minimum delay between actions in seconds (default: 1.0)
             max_delay: Maximum delay between actions in seconds (default: 3.0)
+            context: ScrapingContext for anonymity and evasion
         """
+        super().__init__(context=context)
         self.redis_service = redis_service
         self.headless = headless
         self.min_delay = min_delay
@@ -80,98 +62,58 @@ class IndeedScraper(AbstractScrapper):
 
         # Browser management
         self.browser: Optional[Browser] = None
-        self.context: Optional[BrowserContext] = None
+        self.context_obj: Optional[BrowserContext] = None  # Renamed to avoid confusion with self.context
         self.page: Optional[Page] = None
 
         # Scraping state
         self.collected_job_ids: List[str] = []
-
         self.html_list: List[str] = []
 
         logger.info("IndeedScraper initialized")
 
-    def _get_random_user_agent(self) -> str:
-        """
-        Select a random user agent from the predefined list.
-
-        Returns:
-            A realistic user agent string
-        """
-        return random.choice(self.USER_AGENTS)
-
-    def _get_random_viewport(self) -> dict:
-        """
-        Select a random viewport size from the predefined list.
-
-        Returns:
-            A viewport dictionary with width and height
-        """
-                
-        return random.choice(self.VIEWPORTS)
-
-    async def _delay_with_callback(
-        self,
-        callback: Callable[[], Any],
-        min_seconds: Optional[float] = None,
-        max_seconds: Optional[float] = None,
-    ) -> Any:
-        """
-        Apply a random delay before executing a callback.
-
-        Args:
-            callback: Async or sync function to execute after delay
-            min_seconds: Minimum delay (uses instance default if None)
-            max_seconds: Maximum delay (uses instance default if None)
-
-        Returns:
-            Result of the callback execution
-        """
-        min_sec = min_seconds if min_seconds is not None else self.min_delay
-        max_sec = max_seconds if max_seconds is not None else self.max_delay
-
-        delay = random.uniform(min_sec, max_sec)
-        logger.debug(f"Delaying {delay:.2f}s before action")
-        await asyncio.sleep(delay)
-
-        # Execute callback (handle both async and sync)
-        if asyncio.iscoroutinefunction(callback):
-            return await callback()
-        else:
-            return callback()
-
     async def _launch_browser(self) -> None:
         """
-        Launch Playwright browser with stealth, user agent, and realistic context.
+        Launch Playwright browser with stealth, user agent, and realistic context from ScrapingContext.
         """
         playwright = await async_playwright().start()
 
         # Launch with minimal flags to avoid detection
+        launch_args = ["--disable-blink-features=AutomationControlled"]
+        
+        proxy_config = None
+        if self.context and self.context.proxy:
+            # Playwright proxy format: {'server': 'http://myproxy.com:3128', 'username': 'usr', 'password': 'pwd'}
+            # Our context proxy: {"http": "...", "https": "..."}
+            proxy_server = self.context.proxy.get("https") or self.context.proxy.get("http")
+            if proxy_server:
+                proxy_config = {"server": proxy_server}
+
         self.browser = await playwright.chromium.launch(
             headless=self.headless,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-            ],
+            args=launch_args,
+            proxy=proxy_config
         )
-
-        # Create context with realistic settings
-        viewport = self._get_random_viewport()
-        user_agent = self._get_random_user_agent()
 
         if not self.browser:
             raise RuntimeError("Failed to launch browser")
 
-        #! On doit avoir une rotation des parameters ici  
-        self.context = await self.browser.new_context(
+        # Use settings from context if available
+        user_agent = self.context.user_agent if self.context else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+        viewport = self.context.viewport if self.context else {"width": 1280, "height": 720}
+        locale = self.context.locale if self.context else "en-US"
+        timezone_id = self.context.timezone_id if self.context else "UTC"
+
+        self.context_obj = await self.browser.new_context(
             user_agent=user_agent,
-            viewport=ViewportSize(width= viewport['width'] , height=viewport['height']), 
-            locale="en-US",
-            timezone_id="America/New_York",
+            viewport=ViewportSize(width=viewport['width'], height=viewport['height']),
+            locale=locale,
+            timezone_id=timezone_id,
         )
 
-        if not self.context:
+        if not self.context_obj:
             raise RuntimeError("Failed to create browser context")
 
-        self.page = await self.context.new_page()
+        self.page = await self.context_obj.new_page()
 
         if not self.page:
             raise RuntimeError("Failed to create page")
@@ -337,8 +279,8 @@ class IndeedScraper(AbstractScrapper):
     async def close(self) -> None:
         """Clean up browser resources."""
         try:
-            if self.context:
-                await self.context.close()
+            if self.context_obj:
+                await self.context_obj.close()
             if self.browser:
                 await self.browser.close()
             logger.info("Browser closed")
