@@ -24,8 +24,8 @@ class ContextGenerator:
     ]
 
     PROXIES = [
-        {"http": "http://192.168.1.1:8080", "https": "http://192.168.1.1:8080"},
-        {"http": "http://10.0.0.5:8080", "https": "http://10.0.0.5:8080"},
+        # ToAdd: Add real proxies here or move to .env
+        # Example: {"http": "http://user:pass@host:port", "https": "http://user:pass@host:port"}
     ]
 
     VIEWPORTS = [
@@ -35,9 +35,8 @@ class ContextGenerator:
         {"width": 1280, "height": 800},
     ]
 
-    LOCALES = ["en-US", "en-GB", "fr-FR", "fr-CA"]
-    TIMEZONES = ["America/New_York", "Europe/London", "Europe/Paris", "Asia/Casablanca"]
-
+    LOCALES = ["en-US", "en-GB", "fr-FR", "fr-MA"]
+    TIMEZONES = ["America/New_York", "Europe/London", "Europe/Paris", "Africa/Casablanca"]
     def __init__(
         self,
         min_delay: float = 1.0,
@@ -47,9 +46,10 @@ class ContextGenerator:
         self.max_delay = max_delay
 
     def generate(self) -> ScrapingContext:
+        proxy = random.choice(self.PROXIES) if self.PROXIES else {}
         return ScrapingContext(
             user_agent=random.choice(self.USER_AGENTS),
-            proxy=random.choice(self.PROXIES),
+            proxy=proxy,
             viewport=random.choice(self.VIEWPORTS),
             locale=random.choice(self.LOCALES),
             timezone_id=random.choice(self.TIMEZONES),

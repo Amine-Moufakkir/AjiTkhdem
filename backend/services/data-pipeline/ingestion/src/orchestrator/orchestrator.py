@@ -16,7 +16,7 @@ class Orchestrator:
         self,
         redis_host: str = "redis",
         redis_port: int = 6379,
-        kafka_bootstrap_servers: str = "kafka:9092",
+        kafka_bootstrap_servers: str = "localhost:9092",
         min_delay: float = 1.0,
         max_delay: float = 3.0,
     ):

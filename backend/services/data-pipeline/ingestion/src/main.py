@@ -27,7 +27,7 @@ async def main():
     orchestrator = Orchestrator(
         redis_host="redis",
         redis_port=6379,
-        kafka_bootstrap_servers="kafka:9092"
+        kafka_bootstrap_servers="localhost:9092"
     )
 
     scheduler = Scheduler(
