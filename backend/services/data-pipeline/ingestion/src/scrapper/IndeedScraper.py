@@ -4,6 +4,7 @@ import random
 from typing import List, Optional, Callable, Any
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext, ViewportSize
 from functools import partial
+from orchestrator.context import ScrapingContext
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class IndeedScraper(AbstractScrapper):
         min_delay: float = 1.0,
         max_delay: float = 3.0,
         context: Optional[ScrapingContext] = None,
+        use_proxy: bool = True,
+        useProxy: bool | None = None,
     ):
         """
         Initialize the IndeedScraper.
@@ -56,8 +59,10 @@ class IndeedScraper(AbstractScrapper):
             min_delay: Minimum delay between actions in seconds (default: 1.0)
             max_delay: Maximum delay between actions in seconds (default: 3.0)
             context: ScrapingContext for anonymity and evasion
+            use_proxy: Use proxy from context (default: True)
+            useProxy: Alias for use_proxy
         """
-        super().__init__(context=context)
+        super().__init__(context=context, use_proxy=use_proxy, useProxy=useProxy)
         self.redis_service = redis_service
         self.headless = headless
         self.min_delay = min_delay

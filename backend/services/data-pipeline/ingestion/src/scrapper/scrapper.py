@@ -1,18 +1,17 @@
 from abc import ABC, abstractmethod
-import redis
-from confluent_kafka import Producer
-from bs4 import BeautifulSoup
-import logging
-from typing import List, Optional
-import random
-import json
+from typing import Optional
 
-from utility import get_request
 from orchestrator.context import ScrapingContext
 
+
+def resolve_use_proxy(use_proxy: bool = True, useProxy: bool | None = None) -> bool:
+    return use_proxy if useProxy is None else useProxy
+
+
 class AbstractScrapper(ABC):
-    def __init__(self, context: Optional[ScrapingContext] = None):
+    def __init__(self, context: Optional[ScrapingContext] = None, use_proxy: bool = True, useProxy: bool | None = None):
         self._context = context
+        self.use_proxy = resolve_use_proxy(use_proxy=use_proxy, useProxy=useProxy)
 
     @property
     def context(self) -> Optional[ScrapingContext]:

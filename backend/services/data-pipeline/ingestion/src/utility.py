@@ -1,17 +1,21 @@
 import httpx
 
 
-def get_request(url: str, proxy: dict, user_agent: str):
+def get_request(url: str, proxy: dict | str | None, user_agent: str):
     headers = {"User-Agent": user_agent}
     
-    # httpx expects proxy as a string or dict. 
-    # Our proxy dict is {"http": "...", "https": "..."}
-    proxies = None
+    # httpx expects proxy as a string or an httpx.Proxy instance.
+    # Our proxy can be a dict: {"http": "...", "https": "..."} or a string.
+    proxy_url = None
     if proxy:
-        proxies = proxy
+        if isinstance(proxy, dict):
+            # Try to get https first, then http
+            proxy_url = proxy.get("https") or proxy.get("http")
+        else:
+            proxy_url = proxy
 
     try:
-        with httpx.Client(headers=headers, proxy=proxies, timeout=15.0) as client:
+        with httpx.Client(headers=headers, proxy=proxy_url, timeout=15.0) as client:
             response = client.get(url)
             response.raise_for_status() 
             return response.text

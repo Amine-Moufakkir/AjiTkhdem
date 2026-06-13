@@ -7,22 +7,23 @@ import redis
 from confluent_kafka import Producer
 from bs4 import BeautifulSoup
 import logging
-from typing import List
+from typing import List, Optional
 import random
 import json
 
 from utility import get_request
+from orchestrator.context import ScrapingContext
 
 class RekruteScrapper(AbstractScrapper):
     MAX_PAGES = 2 #ToChange: changin in production
 
-    def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str, context: Optional[ScrapingContext] = None):
-        super().__init__(context=context)
+    def __init__(self, redis_client: redis.Redis, kafka_producer: Producer, base_url: str, context: Optional[ScrapingContext] = None, use_proxy: bool = True, useProxy: bool | None = None):
+        super().__init__(context=context, use_proxy=use_proxy, useProxy=useProxy)
         self.redis = redis_client
         self.producer = kafka_producer
         self.base_url = base_url
         #ToAdd: Add to .env
-        self.topic = "rekrut_raw_jobs"
+        self.topic = "raw_jobs"
         self.CACHE_TTL = 48 * 60 * 60 
 
     def _extract_job_links(self, html: str) -> List[str]:
@@ -37,8 +38,8 @@ class RekruteScrapper(AbstractScrapper):
             page_url = f"{self.base_url}?s=3&p={page}&o=1"
             
             # SRetrieve and Extract the Search Page
-            current_proxy = self.context.proxy if self.context else None
-            current_ua = self.context.user_agent if self.context else None
+            current_proxy = self.context.proxy if self.use_proxy and self.context else None
+            current_ua = self.context.user_agent if self.context else "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
             
             search_html = get_request(
                 url=page_url, 

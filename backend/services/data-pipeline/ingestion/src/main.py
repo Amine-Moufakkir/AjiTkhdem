@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from orchestrator.orchestrator import Orchestrator
 from scheduler.scheduler import Scheduler 
@@ -24,10 +25,15 @@ async def main():
 
     logger.info("Initializing Data Pipeline Ingestion Service...")
 
+    use_proxy = os.getenv("USE_PROXY", "true").lower() not in {"false", "0", "no", "off"}
+
+    print("use_proxy:", use_proxy)
+
+
     orchestrator = Orchestrator(
-        redis_host="redis",
         redis_port=6379,
-        kafka_bootstrap_servers="localhost:9092"
+        kafka_bootstrap_servers="localhost:9092",
+        use_proxy=use_proxy
     )
 
     scheduler = Scheduler(
