@@ -7,8 +7,8 @@ from typing import List, Optional
 import random
 import json
 
-from src.utility import get_request
-from src.orchestrator.context import ScrapingContext
+from utility import get_request
+from orchestrator.context import ScrapingContext
 
 class AbstractScrapper(ABC):
     def __init__(self, context: Optional[ScrapingContext] = None):
@@ -20,6 +20,7 @@ class AbstractScrapper(ABC):
 
     @context.setter
     def context(self, value: ScrapingContext):
+        
         self._context = value
 
     @abstractmethod

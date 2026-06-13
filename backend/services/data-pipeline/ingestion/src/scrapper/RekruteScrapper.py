@@ -11,7 +11,7 @@ from typing import List
 import random
 import json
 
-from src.utility import get_request
+from utility import get_request
 
 class RekruteScrapper(AbstractScrapper):
     MAX_PAGES = 2 #ToChange: changin in production

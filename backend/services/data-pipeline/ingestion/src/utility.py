@@ -1,14 +1,17 @@
 import httpx
 
 
-
-#! dans cette methode on utilse pas les proxies
 def get_request(url: str, proxy: dict, user_agent: str):
     headers = {"User-Agent": user_agent}
-    # proxy_url = proxy.get("https")
+    
+    # httpx expects proxy as a string or dict. 
+    # Our proxy dict is {"http": "...", "https": "..."}
+    proxies = None
+    if proxy:
+        proxies = proxy
 
     try:
-        with httpx.Client(headers=headers, timeout=10.0) as client:
+        with httpx.Client(headers=headers, proxy=proxies, timeout=15.0) as client:
             response = client.get(url)
             response.raise_for_status() 
             return response.text

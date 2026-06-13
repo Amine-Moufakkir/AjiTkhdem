@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import sys
-from src.orchestrator.orchestrator import Orchestrator
-from src.scheduler.scheduler import Scheduler 
+from orchestrator.orchestrator import Orchestrator
+from scheduler.scheduler import Scheduler 
 
 # Configure logging
 logging.basicConfig(

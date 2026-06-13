@@ -3,7 +3,7 @@ import logging
 import asyncio
 from datetime import datetime, time, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from src.orchestrator.orchestrator import Orchestrator
+from orchestrator.orchestrator import Orchestrator
 
 logger = logging.getLogger(__name__)
 

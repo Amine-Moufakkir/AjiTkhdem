@@ -3,9 +3,9 @@ import redis
 import logging
 import asyncio
 from confluent_kafka import Producer
-from src.scrapper.scrapper import AbstractScrapper
-from src.scrapper.RekruteScrapper import RekruteScrapper
-from src.scrapper.IndeedScraper import IndeedScraper
+from scrapper.scrapper import AbstractScrapper
+from scrapper.RekruteScrapper import RekruteScrapper
+from scrapper.IndeedScraper import IndeedScraper
 from .context import ContextGenerator, ScrapingContext
 
 logger = logging.getLogger(__name__)

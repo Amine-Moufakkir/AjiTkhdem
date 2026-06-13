@@ -8,6 +8,9 @@ from functools import partial
 logger = logging.getLogger(__name__)
 
 
+from scrapper.scrapper import AbstractScrapper
+
+
 class RedisService:
     """
     Interface for Redis-based deduplication and storage.
@@ -61,6 +64,7 @@ class IndeedScraper(AbstractScrapper):
         self.max_delay = max_delay
 
         # Browser management
+        self.playwright: Any = None
         self.browser: Optional[Browser] = None
         self.context_obj: Optional[BrowserContext] = None  # Renamed to avoid confusion with self.context
         self.page: Optional[Page] = None
@@ -71,11 +75,41 @@ class IndeedScraper(AbstractScrapper):
 
         logger.info("IndeedScraper initialized")
 
+    async def _delay_with_callback(
+        self,
+        callback: Callable[[], Any],
+        min_seconds: Optional[float] = None,
+        max_seconds: Optional[float] = None,
+    ) -> Any:
+        """
+        Apply a random delay before executing a callback.
+
+        Args:
+            callback: Async or sync function to execute after delay
+            min_seconds: Minimum delay (uses instance default if None)
+            max_seconds: Maximum delay (uses instance default if None)
+
+        Returns:
+            Result of the callback execution
+        """
+        min_sec = min_seconds if min_seconds is not None else self.min_delay
+        max_sec = max_seconds if max_seconds is not None else self.max_delay
+
+        delay = random.uniform(min_sec, max_sec)
+        logger.debug(f"Delaying {delay:.2f}s before action")
+        await asyncio.sleep(delay)
+
+        # Execute callback (handle both async and sync)
+        if asyncio.iscoroutinefunction(callback):
+            return await callback()
+        else:
+            return callback()
+
     async def _launch_browser(self) -> None:
         """
         Launch Playwright browser with stealth, user agent, and realistic context from ScrapingContext.
         """
-        playwright = await async_playwright().start()
+        self.playwright = await async_playwright().start()
 
         # Launch with minimal flags to avoid detection
         launch_args = ["--disable-blink-features=AutomationControlled"]
@@ -88,7 +122,7 @@ class IndeedScraper(AbstractScrapper):
             if proxy_server:
                 proxy_config = {"server": proxy_server}
 
-        self.browser = await playwright.chromium.launch(
+        self.browser = await self.playwright.chromium.launch(
             headless=self.headless,
             args=launch_args,
             proxy=proxy_config
@@ -283,6 +317,8 @@ class IndeedScraper(AbstractScrapper):
                 await self.context_obj.close()
             if self.browser:
                 await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
             logger.info("Browser closed")
         except Exception as e:
             logger.error(f"Error closing browser: {e}")
@@ -311,7 +347,7 @@ if __name__ == "__main__":
         redis_service = MockRedisService()
         scraper = IndeedScraper(
             redis_service=redis_service,
-            headless=False,
+            headless=True,
             min_delay=1.0,
             max_delay=3.0,
         )
