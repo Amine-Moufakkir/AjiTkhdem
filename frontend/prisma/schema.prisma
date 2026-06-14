@@ -1,0 +1,38 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                       String       @id @default("user-default")
+  email                    String       @unique
+  name                     String
+  passwordHash             String
+  skills                   String       // Comma-separated or JSON list of skills
+  preferenceLocation       String?
+  preferenceSalary         Int?
+  preferenceJobType        String?      // 'Full-time' | 'Contract' | 'Part-time'
+  preferenceWorkModel      String?      // 'Remote' | 'Hybrid' | 'On-site'
+  subscriptionStatus       String       @default("Pro") // 'Free' | 'Pro'
+  profileOptimizationScore Int          @default(0)
+  cvScore                  Int?
+  cvRecommendations        String?      // JSON serialized string or newline-separated string
+  cvFileName               String?
+  createdAt                DateTime     @default(now())
+  experiences              Experience[]
+}
+
+model Experience {
+  id          String @id @default(uuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  company     String
+  type        String
+  period      String
+  description String
+}

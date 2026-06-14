@@ -1,0 +1,6 @@
+{
+  "name": "AutoApply AI",
+  "description": "AI-powered job recommendation platform featuring manual JWT authentication, customized job tracking, detailed match summaries, and billing integrations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
