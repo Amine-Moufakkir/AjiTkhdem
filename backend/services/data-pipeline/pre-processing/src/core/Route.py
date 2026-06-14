@@ -74,7 +74,7 @@ class Route:
                     
                     if result:
                         
-                        self.kafka.send_on_succes( result, [])
+                        self.kafka.send_on_succes( result.to_dict(), [])
                         
                     else:
                         print(f"⚠️ Aucun résultat à envoyer (doublon détecté)")
@@ -126,7 +126,7 @@ class Route:
             
             # Essayer d'envoyer un message de test
             test_message = {"test": "connection", "timestamp": str(__import__('datetime').datetime.now())}
-            future = self.kafka.send_on_succes("test-topic", test_message )
+            future = self.kafka.send_on_succes(test_message, [])
             
             # Attendre la confirmation
             record_metadata = future.get(timeout=10)

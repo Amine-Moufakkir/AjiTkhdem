@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Any
 from core.HashPatternGenerator import HashPatternGenerator
-from genericParser import GenericParser
+from services.genericParser import GenericParser
 from core.HashGenerator import HashGenerator
 from models.db import MongoDB
 from services.IndeedParser import IndeedParser
@@ -39,6 +39,11 @@ class ParserFactory:
         if parser_type_lower == "indeed":
             hash_generator = HashPatternGenerator()
             return IndeedParser(  hash_generator , self.db)
+        
+        elif parser_type_lower == "rekrute":
+            from services.RekruteParser import RekruteParser
+            hash_generator = HashPatternGenerator()
+            return RekruteParser(hash_generator, self.db)
         
         else :
             raise ValueError(f"Le type de parser '{parser_type}' n'est pas enregistré.")

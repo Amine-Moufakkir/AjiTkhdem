@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 
 class Kafka:
-    def __init__(self, topic_output,topics_inputs:list  ,  bootstrap_servers='kafka:9092', max_retries=5, base_delay=1, max_delay=60):
+    def __init__(self, topic_output,topics_inputs:list  ,  bootstrap_servers='localhost:9092', max_retries=5, base_delay=1, max_delay=60):
         """
         Args:
             bootstrap_servers: Adresse du broker Kafka
@@ -204,7 +204,7 @@ class Kafka:
                      self.producer.send(topic=topic, value=message.value, headers=message.headers)
                      self.producer.flush()
                      time.sleep(1)
-                     return 
+                     continue 
                 
 
             # 5. On renvoie tout dans le dictionnaire pour que le pipeline y ait accès

@@ -55,7 +55,7 @@ async def main():
         print("\n📡 Initialisation de Kafka...")
         
         # Récupérer les variables d'environnement
-        kafka_bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+        kafka_bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
         input_topics = os.getenv("KAFKA_INPUT_TOPICS", "raw_jobs").split(",")
         output_topic = os.getenv("KAFKA_OUTPUT_TOPIC", "processed_jobs")
         max_retries = int(os.getenv("KAFKA_MAX_RETRIES", "5"))

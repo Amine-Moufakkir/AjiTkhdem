@@ -21,10 +21,10 @@ class GenericParser(ABC):
 
 
 
-    def __extract(self, raw_data:DataProcessingDTO ) -> JobCleanedDTO | None:
-        """Méthode privée d'extraction."""
-        # Logique simulée : on pourrait imaginer une extraction de JSON ou RegEx ici
-        return JobCleanedDTO() 
+    @abstractmethod
+    def extract(self, data: DataProcessingDTO) -> JobCleanedDTO | None:
+        """Méthode d'extraction à implémenter par les sous-classes."""
+        pass
 
     async def  pipeline(self, data: DataProcessingDTO) ->JobCleanedDTO | None:
         """Méthode publique : le chef d'orchestre."""
@@ -35,7 +35,7 @@ class GenericParser(ABC):
         cleaned_data = data 
         cleaned_data.html = self.cleaner.clean(data.html)
 
-        extracted = self.__extract(cleaned_data)
+        extracted = self.extract(cleaned_data)
         # Retourne un JobCleanedDTO
 
         
@@ -47,6 +47,8 @@ class GenericParser(ABC):
         
         # 3. Hachage
         hash_value = self.hash_generator.generate(dict_extracted)
+        extracted.hash = hash_value
+        dict_extracted["hash"] = hash_value
         
 
         meta_data = {

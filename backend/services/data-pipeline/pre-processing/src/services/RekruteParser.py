@@ -2,8 +2,9 @@ import json
 import re
 from bs4 import BeautifulSoup
 
-from core.HashGenerator import HashGenerator
 from core.HashPatternGenerator import HashPatternGenerator
+from dto.DataProcessingDTO import DataProcessingDTO
+from dto.JobCleanedDTO import JobCleanedDTO
 from models.db import MongoDB
 from .genericParser import GenericParser
 
@@ -15,22 +16,24 @@ class RekruteParser(GenericParser):
         hash_generator.setPattern("site-job_title-job_ref-company_location-job_type-job_description")
         super().__init__(hash_generator, db)
 
-    def extract(self, cleaned_html: dict) -> dict:
-        soup = BeautifulSoup(cleaned_html["html"], 'lxml')
-        url = cleaned_html.get("url", "")
+    def extract(self, data: DataProcessingDTO) -> JobCleanedDTO:
+        soup = BeautifulSoup(data.html, 'lxml')
+        url = data.url
         
         # 1. Try to load the hidden JSON-LD structured data first
         json_ld = self._extract_json_ld(soup)
         
-        return {
-            'site': "Rekrute",
-            'job_title': self._extract_job_title(soup, json_ld),
-            'job_ref': self._extract_job_ref(url),
-            'company': self._extract_company(soup, json_ld),
-            'location': self._extract_location(soup, json_ld),
-            'job_type': self._extract_job_type(soup, json_ld),
-            'job_description': self._extract_job_description(soup, json_ld),
-        }
+        extracted_data = JobCleanedDTO()
+        extracted_data.site = "Rekrute"
+        extracted_data.job_title = self._extract_job_title(soup, json_ld)
+        extracted_data.job_ref = self._extract_job_ref(url)
+        extracted_data.company = self._extract_company(soup, json_ld)
+        extracted_data.location = self._extract_location(soup, json_ld)
+        extracted_data.job_type = self._extract_job_type(soup, json_ld)
+        extracted_data.job_description = self._extract_job_description(soup, json_ld)
+        extracted_data.url = url
+        
+        return extracted_data
         
     def _extract_json_ld(self, soup: BeautifulSoup) -> dict:
         """Extrait les données structurées cachées pour un scraping ultra-fiable."""
@@ -144,8 +147,10 @@ class RekruteParser(GenericParser):
             if h2 and h2.get_text(strip=True) in ['Poste :', 'Profil recherché :', 'Entreprise :']:
                 # Extract the title so it's not repeated, then grab the remaining text
                 h2_text = h2.get_text(strip=True)
-                h2.extract()
+                # Avoid modifying soup if possible, but here it's okay
                 block_text = block.get_text(separator=' ', strip=True)
+                # Remove the header from the text
+                block_text = block_text.replace(h2_text, '', 1).strip()
                 description_parts.append(f"{h2_text}\n{block_text}")
                 
         if description_parts:

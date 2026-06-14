@@ -1,12 +1,15 @@
 import sys
 import os
 import json
+from unittest.mock import MagicMock
 
 # Ajouter le chemin src au path Python
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
 from services.IndeedParser import IndeedParser
 from core.Cleaner import Cleaner
+from dto.DataProcessingDTO import DataProcessingDTO
+from core.HashPatternGenerator import HashPatternGenerator
 
 
 def main():
@@ -28,22 +31,26 @@ def main():
     # Étape 1: Nettoyage
     print("\n📋 Étape 1: Nettoyage du HTML...")
     cleaner = Cleaner()
-    html_clean = {
-                "html":cleaner.clean(html_brut) , 
-                "url":"https://ma.indeed.com/?r=us&vjk=0a5d0000df3de9f4"
-                  }
-    print(f"✓ HTML nettoyé ({len(html_clean)} caractères)")
+    html_clean = DataProcessingDTO(
+        html=cleaner.clean(html_brut), 
+        url="https://ma.indeed.com/?r=us&vjk=0a5d0000df3de9f4"
+    )
+    print(f"✓ HTML nettoyé ({len(html_clean.html)} caractères)")
     
     # Étape 2: Extraction
     print("\n📋 Étape 2: Extraction des données...")
-    parser = IndeedParser()
-    donnees = parser.extract(html_clean)
+    mock_db = MagicMock()
+    hash_gen = HashPatternGenerator()
+    parser = IndeedParser(hash_gen, mock_db)
+    extracted_dto = parser.extract(html_clean)
     print("✓ Extraction terminée")
     
     # Étape 3: Affichage
     print("\n📋 Résultats de l'extraction:")
     print("-" * 80)
-    print(json.dumps(donnees, ensure_ascii=False, indent=2))
+    # Convertir le DTO en dict pour l'affichage JSON
+    donnees = extracted_dto.to_dict()
+    print(json.dumps(donnees, ensure_ascii=False, indent=2, default=str))
     print("-" * 80)
     
     print("\n✅ Test terminé avec succès")
