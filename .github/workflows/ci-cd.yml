@@ -32,16 +32,22 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: backend/services/data-pipeline/ingestion/requirements.txt
-
-      - name: Install dependencies
+  
+      - name: Create virtual environment and install dependencies
         run: |
           cd backend/services/data-pipeline/ingestion
-          pip install --upgrade pip
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       - name: Run ingestion tests
         run: |
           cd backend/services/data-pipeline/ingestion
+          source venv/bin/activate
+          export PYTHONPATH="${PWD}/src:$PYTHONPATH"
           pytest test/ -v --tb=short
         env:
           REDIS_HOST: localhost
@@ -93,15 +99,21 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/services/data-pipeline/noramlization/requirements.txt
 
-      - name: Install dependencies
+      - name: Create virtual environment and install dependencies
         run: |
           cd backend/services/data-pipeline/noramlization
-          pip install --upgrade pip
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       - name: Run normalization tests
         run: |
           cd backend/services/data-pipeline/noramlization
+          source venv/bin/activate
+          export PYTHONPATH="${PWD}/src:$PYTHONPATH"
           pytest test/unit_test/ -v --tb=short
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/job_db
@@ -132,15 +144,21 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/services/data-pipeline/pre-processing/requirements.txt
 
-      - name: Install dependencies
+      - name: Create virtual environment and install dependencies
         run: |
           cd backend/services/data-pipeline/pre-processing
-          pip install --upgrade pip
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       - name: Run preprocessing tests
         run: |
           cd backend/services/data-pipeline/pre-processing
+          source venv/bin/activate
+          export PYTHONPATH="${PWD}/src:$PYTHONPATH"
           pytest test/unit-test/ -v --tb=short
         env:
           MONGODB_URL: mongodb://localhost:27017
@@ -157,7 +175,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
