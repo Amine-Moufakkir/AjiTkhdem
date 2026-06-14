@@ -6,3 +6,7 @@ httpx
 apscheduler
 bs4
 redis
+pytest
+pytest-asyncio
+playwright
+pytest-playwright
