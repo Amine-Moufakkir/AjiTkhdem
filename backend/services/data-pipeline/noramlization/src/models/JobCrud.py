@@ -12,6 +12,25 @@ class JobCRUD:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_all(self) -> Sequence[Job]:
+        from sqlalchemy.orm import selectinload
+        stmt = select(Job).options(selectinload(Job.entreprise))
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def search_jobs(self, profiles: list[str]) -> Sequence[Job]:
+        # Simulation simple de Full-Text Search avec ILIKE sur plusieurs profils
+        from sqlalchemy import or_
+        from sqlalchemy.orm import selectinload
+        conditions = []
+        for profile in profiles:
+            conditions.append(Job.profile.ilike(f"%{profile}%"))
+            conditions.append(Job.description.ilike(f"%{profile}%"))
+        
+        stmt = select(Job).where(or_(*conditions)).options(selectinload(Job.entreprise))
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
     async def insert(self, **kwargs) -> Job:
         job = Job(**kwargs)
         self.session.add(job)

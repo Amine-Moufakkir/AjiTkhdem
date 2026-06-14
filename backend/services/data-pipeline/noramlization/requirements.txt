@@ -14,3 +14,6 @@ pytest
 pytest-asyncio
 playwright
 pytest-playwright
+fastapi
+uvicorn[standard]
+aiosqlite
