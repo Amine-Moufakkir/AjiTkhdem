@@ -207,3 +207,6 @@ The platform leverages **Polyglot Persistence** to optimize data modeling based 
 **AjiTkhdem** has successfully transitioned from an architectural concept into a robust, enterprise-grade, distributed microservices platform. By decoupling ingestion data pipelines through **Apache Kafka**, utilizing tailored storage engines via **Polyglot Persistence**, and implementing advanced **LLM orchestration** alongside headless browser clusters, the platform achieves full automation of the end-to-end job application lifecycle.
 
 The system is highly maintainable, thoroughly tested via rigorous automated **CI/CD pipelines**, and entirely prepared for production deployment.
+
+OUSSAMA LAKHDAR
+AMINE MOUFAKKIR
